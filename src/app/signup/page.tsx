@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 const EMAIL_RATE_LIMIT_WINDOW_MS = 60_000;
+const ENFORCE_EMAIL_COOLDOWN = process.env.NODE_ENV === "production";
 
 const isRateLimitError = (message: string) => {
   const normalized = message.toLowerCase();
@@ -36,10 +37,12 @@ export default function Signup() {
     setLoading(true);
     const normalizedEmail = email.toLowerCase().trim();
     const cooldownKey = getCooldownKey(normalizedEmail);
-    const lastAttempt = Number(localStorage.getItem(cooldownKey) ?? 0);
+    const lastAttempt = ENFORCE_EMAIL_COOLDOWN
+      ? Number(localStorage.getItem(cooldownKey) ?? 0)
+      : 0;
     const elapsed = Date.now() - lastAttempt;
 
-    if (lastAttempt && elapsed < EMAIL_RATE_LIMIT_WINDOW_MS) {
+    if (ENFORCE_EMAIL_COOLDOWN && lastAttempt && elapsed < EMAIL_RATE_LIMIT_WINDOW_MS) {
       const waitSeconds = Math.ceil(
         (EMAIL_RATE_LIMIT_WINDOW_MS - elapsed) / 1000,
       );
@@ -70,7 +73,9 @@ export default function Signup() {
     if (signUpError) {
       setLoading(false);
       if (isRateLimitError(signUpError.message)) {
-        localStorage.setItem(cooldownKey, String(Date.now()));
+        if (ENFORCE_EMAIL_COOLDOWN) {
+          localStorage.setItem(cooldownKey, String(Date.now()));
+        }
         setError(
           "Email rate limit exceeded. Please wait about 1 minute, then try again.",
         );
@@ -80,7 +85,9 @@ export default function Signup() {
       return;
     }
 
-    localStorage.setItem(cooldownKey, String(Date.now()));
+    if (ENFORCE_EMAIL_COOLDOWN) {
+      localStorage.setItem(cooldownKey, String(Date.now()));
+    }
     if (data.session) {
       setLoading(false);
       router.push("/user");
