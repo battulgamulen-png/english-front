@@ -3,6 +3,16 @@
 import { createClient } from "@/utils/supabase/client";
 import { FormEvent, useState } from "react";
 
+const EMAIL_RATE_LIMIT_WINDOW_MS = 60_000;
+
+const isRateLimitError = (message: string) => {
+  const normalized = message.toLowerCase();
+  return normalized.includes("rate limit") || normalized.includes("too many");
+};
+
+const getCooldownKey = (email: string) =>
+  `forgot-password-cooldown:${email.toLowerCase().trim()}`;
+
 export default function ForgetPassword() {
   const supabase = createClient();
 
@@ -16,20 +26,44 @@ export default function ForgetPassword() {
     setLoading(true);
     setError(null);
     setMessage(null);
+    const normalizedEmail = email.toLowerCase().trim();
+    const cooldownKey = getCooldownKey(normalizedEmail);
+    const lastAttempt = Number(localStorage.getItem(cooldownKey) ?? 0);
+    const elapsed = Date.now() - lastAttempt;
+
+    if (lastAttempt && elapsed < EMAIL_RATE_LIMIT_WINDOW_MS) {
+      const waitSeconds = Math.ceil(
+        (EMAIL_RATE_LIMIT_WINDOW_MS - elapsed) / 1000,
+      );
+      setLoading(false);
+      setError(
+        `Please wait ${waitSeconds}s before requesting another reset email.`,
+      );
+      return;
+    }
 
     const redirectTo = `${window.location.origin}/signup/createpassword`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-      email,
+      normalizedEmail,
       { redirectTo },
     );
 
     setLoading(false);
 
     if (resetError) {
+      if (isRateLimitError(resetError.message)) {
+        localStorage.setItem(cooldownKey, String(Date.now()));
+        setError(
+          "Email rate limit exceeded. Please wait about 1 minute, then try again.",
+        );
+        return;
+      }
+
       setError(resetError.message);
       return;
     }
 
+    localStorage.setItem(cooldownKey, String(Date.now()));
     setMessage("Reset link sent. Please check your inbox.");
   };
 

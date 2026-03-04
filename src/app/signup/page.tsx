@@ -4,6 +4,16 @@ import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
+const EMAIL_RATE_LIMIT_WINDOW_MS = 60_000;
+
+const isRateLimitError = (message: string) => {
+  const normalized = message.toLowerCase();
+  return normalized.includes("rate limit") || normalized.includes("too many");
+};
+
+const getCooldownKey = (email: string) =>
+  `signup-email-cooldown:${email.toLowerCase().trim()}`;
+
 export default function Signup() {
   const supabase = createClient();
   const router = useRouter();
@@ -24,11 +34,26 @@ export default function Signup() {
     setError(null);
     setMessage(null);
     setLoading(true);
+    const normalizedEmail = email.toLowerCase().trim();
+    const cooldownKey = getCooldownKey(normalizedEmail);
+    const lastAttempt = Number(localStorage.getItem(cooldownKey) ?? 0);
+    const elapsed = Date.now() - lastAttempt;
+
+    if (lastAttempt && elapsed < EMAIL_RATE_LIMIT_WINDOW_MS) {
+      const waitSeconds = Math.ceil(
+        (EMAIL_RATE_LIMIT_WINDOW_MS - elapsed) / 1000,
+      );
+      setLoading(false);
+      setError(
+        `Please wait ${waitSeconds}s before requesting another verification email.`,
+      );
+      return;
+    }
 
     const emailRedirectTo = `${window.location.origin}/user`;
 
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
+      email: normalizedEmail,
       password,
       options: {
         emailRedirectTo,
@@ -44,10 +69,18 @@ export default function Signup() {
 
     if (signUpError) {
       setLoading(false);
+      if (isRateLimitError(signUpError.message)) {
+        localStorage.setItem(cooldownKey, String(Date.now()));
+        setError(
+          "Email rate limit exceeded. Please wait about 1 minute, then try again.",
+        );
+        return;
+      }
       setError(signUpError.message);
       return;
     }
 
+    localStorage.setItem(cooldownKey, String(Date.now()));
     if (data.session) {
       setLoading(false);
       router.push("/user");
@@ -55,7 +88,7 @@ export default function Signup() {
     }
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
-      email,
+      email: normalizedEmail,
       password,
     });
 
