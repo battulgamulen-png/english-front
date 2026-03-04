@@ -20,7 +20,7 @@ export default function ForgetPassword() {
     const redirectTo = `${window.location.origin}/signup/createpassword`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       email,
-      { redirectTo }
+      { redirectTo },
     );
 
     setLoading(false);
@@ -34,9 +34,11 @@ export default function ForgetPassword() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[url('/english.PNG')] bg-cover bg-center bg-no-repeat px-4">
+    <div className="flex min-h-screen text-black items-center justify-center bg-[url('/english.PNG')] bg-cover bg-center bg-no-repeat px-4">
       <div className="w-full max-w-[420px] rounded-3xl border border-white/30 bg-white/20 p-8 shadow-2xl backdrop-blur-md">
-        <h1 className="mb-2 text-3xl font-semibold text-white">Forgot Password</h1>
+        <h1 className="mb-2 text-3xl font-semibold text-white">
+          Forgot Password
+        </h1>
         <p className="mb-6 text-sm text-white/90">
           Enter your email and we will send you a password reset link.
         </p>
@@ -58,7 +60,9 @@ export default function ForgetPassword() {
           </div>
 
           {error ? <p className="text-sm text-red-200">{error}</p> : null}
-          {message ? <p className="text-sm text-emerald-200">{message}</p> : null}
+          {message ? (
+            <p className="text-sm text-emerald-200">{message}</p>
+          ) : null}
 
           <button
             type="submit"

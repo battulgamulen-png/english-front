@@ -1,7 +1,8 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type IconProps = {
   className?: string;
@@ -17,8 +18,11 @@ function SearchIcon({ className = "h-5 w-5" }: IconProps) {
 }
 
 export default function Header() {
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [query, setQuery] = useState("");
+  const [displayName, setDisplayName] = useState("User");
+  const [displayRole] = useState("Student");
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -32,6 +36,31 @@ export default function Header() {
     if (!q) return;
     router.push(`/user/search?q=${encodeURIComponent(q)}`);
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (cancelled || !data.user) return;
+
+      const first = (data.user.user_metadata?.first_name as string | undefined) ?? "";
+      const last = (data.user.user_metadata?.last_name as string | undefined) ?? "";
+      const full = `${first} ${last}`.trim();
+      const byMeta = (data.user.user_metadata?.full_name as string | undefined) ?? "";
+      const byEmail = data.user.email?.split("@")[0] ?? "";
+
+      setDisplayName(full || byMeta || byEmail || "User");
+    };
+
+    loadUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
+  const initial = displayName.trim().charAt(0).toUpperCase() || "U";
 
   return (
     <header className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
@@ -65,13 +94,13 @@ export default function Header() {
             className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 transition hover:bg-slate-50"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500 text-sm font-semibold text-white">
-              M
+              {initial}
             </span>
             <span className="pr-1 text-left">
               <span className="block text-xs font-medium text-slate-900">
-                Mulen
+                {displayName}
               </span>
-              <span className="block text-[11px] text-slate-500">Student</span>
+              <span className="block text-[11px] text-slate-500">{displayRole}</span>
             </span>
           </button>
         </div>

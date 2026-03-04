@@ -18,6 +18,7 @@ type StudyMode =
 type UILang = "Монгол" | "English";
 
 type SettingsState = {
+  fullName: string;
   uiLang: UILang;
   level: Level;
   dailyGoalMin: number;
@@ -32,6 +33,7 @@ type SettingsState = {
 };
 
 const DEFAULT: SettingsState = {
+  fullName: "",
   uiLang: "Монгол",
   level: "Beginner",
   dailyGoalMin: 15,
@@ -43,6 +45,22 @@ const DEFAULT: SettingsState = {
   remindTime: "20:00",
   streakFreeze: false,
   email: "",
+};
+
+type SettingsRow = {
+  user_id: string;
+  full_name: string | null;
+  email: string | null;
+  ui_lang: UILang | null;
+  level: Level | null;
+  daily_goal_min: number | null;
+  study_modes: StudyMode[] | null;
+  show_translations: boolean | null;
+  auto_play_audio: boolean | null;
+  voice_speed: 0.75 | 1 | 1.25 | null;
+  remind_enabled: boolean | null;
+  remind_time: string | null;
+  streak_freeze: boolean | null;
 };
 
 const STORAGE_KEY = "english_site_settings_v1";
@@ -70,8 +88,143 @@ export default function SettingsPage() {
     }
   });
   const [savedAt, setSavedAt] = useState<number | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [dbStatus, setDbStatus] = useState<string | null>(null);
+  const [dbEnabled, setDbEnabled] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const isMn = state.uiLang === "Монгол";
+  const t = {
+    settings: isMn ? "Тохиргоо" : "Settings",
+    reset: isMn ? "Сэргээх" : "Reset",
+    logout: isMn ? "Гарах" : "Logout",
+    loggingOut: isMn ? "Гарч байна..." : "Logging out...",
+    profile: isMn ? "Профайл" : "Profile",
+    profileDesc: isMn
+      ? "Тохиргоо хадгалах, сануулга авах имэйл."
+      : "Profile and account contact.",
+    name: isMn ? "Нэр" : "Name",
+    uiLanguage: isMn ? "Хэл" : "UI Language",
+    learning: isMn ? "Суралцах" : "Learning",
+    learningDesc: isMn
+      ? "Түвшин, өдөр тутмын зорилго, хичээлийн төрөл."
+      : "Level, daily goal, and study modes.",
+    level: isMn ? "Түвшин" : "Level",
+    dailyGoal: isMn ? "Өдөр тутмын зорилго (минут)" : "Daily goal (minutes)",
+    studyModes: isMn ? "Суралцах төрлүүд" : "Study modes",
+    studyModesDesc: isMn
+      ? "Сонгосон төрлүүдээр чинь хичээл санал болгоно."
+      : "Recommendations follow selected modes.",
+    showTranslation: isMn
+      ? "Монгол орчуулга харуулах"
+      : "Show Mongolian translation",
+    showTranslationDesc: isMn
+      ? "Үг/өгүүлбэрийн орчуулга харуулах"
+      : "Show translated words/sentences",
+    autoPlay: isMn ? "Аудио автоматаар тоглуулах" : "Auto-play audio",
+    autoPlayDesc: isMn
+      ? "Суралцах үед дуудлага автоматаар тоглуулах"
+      : "Play pronunciation automatically",
+    reminders: isMn ? "Сануулга" : "Reminders",
+    remindersDesc: isMn
+      ? "Өдөр бүр сануулга авч, streak-ээ хадгал."
+      : "Enable reminders and keep your streak.",
+    dailyReminder: isMn ? "Өдрийн сануулга" : "Daily reminder",
+    dailyReminderDesc: isMn
+      ? "Өдөр бүр тодорхой цагт сануулга асаах"
+      : "Enable reminder at a fixed time",
+    reminderTime: isMn ? "Сануулах цаг" : "Reminder time",
+    lastSaved: isMn ? "Сүүлд хадгалсан:" : "Last saved:",
+    autoSaved: isMn
+      ? "Өөрчлөлт автоматаар хадгалагдана."
+      : "Changes are saved automatically.",
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadAuthAndDbSettings = async () => {
+      const { data: authData, error: authLoadError } =
+        await supabase.auth.getUser();
+
+      if (cancelled) return;
+
+      if (authLoadError || !authData.user) {
+        setAuthError(authLoadError?.message ?? "Please login first.");
+        return;
+      }
+
+      const user = authData.user;
+      setUserId(user.id);
+
+      const first =
+        (user.user_metadata?.first_name as string | undefined) ?? "";
+      const last = (user.user_metadata?.last_name as string | undefined) ?? "";
+      const full = `${first} ${last}`.trim();
+
+      setState((prev) => ({
+        ...prev,
+        fullName:
+          full ||
+          (user.user_metadata?.full_name as string | undefined) ||
+          prev.fullName,
+        email: user.email ?? prev.email,
+      }));
+
+      const { data, error } = await supabase
+        .from("user_settings")
+        .select(
+          "user_id,full_name,email,ui_lang,level,daily_goal_min,study_modes,show_translations,auto_play_audio,voice_speed,remind_enabled,remind_time,streak_freeze",
+        )
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        if (error.message.includes("public.user_settings")) {
+          setDbEnabled(false);
+          setDbStatus(
+            "`user_settings` хүснэгт олдсонгүй. Local settings ашиглаж байна.",
+          );
+          return;
+        }
+        setDbStatus(
+          "DB settings уншиж чадсангүй. Local settings ашиглаж байна.",
+        );
+        return;
+      }
+
+      if (!data) {
+        setDbStatus("DB дээр settings байхгүй. Хадгалахад автоматаар үүснэ.");
+        return;
+      }
+
+      const row = data as SettingsRow;
+      setState((prev) => ({
+        ...prev,
+        fullName: row.full_name ?? prev.fullName,
+        email: row.email ?? prev.email,
+        uiLang: row.ui_lang ?? prev.uiLang,
+        level: row.level ?? prev.level,
+        dailyGoalMin: row.daily_goal_min ?? prev.dailyGoalMin,
+        studyModes: row.study_modes ?? prev.studyModes,
+        showTranslations: row.show_translations ?? prev.showTranslations,
+        autoPlayAudio: row.auto_play_audio ?? prev.autoPlayAudio,
+        voiceSpeed: row.voice_speed ?? prev.voiceSpeed,
+        remindEnabled: row.remind_enabled ?? prev.remindEnabled,
+        remindTime: row.remind_time ?? prev.remindTime,
+        streakFreeze: row.streak_freeze ?? prev.streakFreeze,
+      }));
+      setDbStatus("DB settings ачааллаа.");
+    };
+
+    loadAuthAndDbSettings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
 
   // autosave (debounced-ish)
   useEffect(() => {
@@ -86,14 +239,61 @@ export default function SettingsPage() {
     return () => clearTimeout(t);
   }, [state]);
 
+  useEffect(() => {
+    if (!userId || !dbEnabled) return;
+
+    const t = setTimeout(async () => {
+      const payload = {
+        user_id: userId,
+        full_name: state.fullName,
+        email: state.email,
+        ui_lang: state.uiLang,
+        level: state.level,
+        daily_goal_min: state.dailyGoalMin,
+        study_modes: state.studyModes,
+        show_translations: state.showTranslations,
+        auto_play_audio: state.autoPlayAudio,
+        voice_speed: state.voiceSpeed,
+        remind_enabled: state.remindEnabled,
+        remind_time: state.remindTime,
+        streak_freeze: state.streakFreeze,
+      };
+
+      const { error } = await supabase
+        .from("user_settings")
+        .upsert(payload, { onConflict: "user_id" });
+
+      if (error) {
+        if (error.message.includes("public.user_settings")) {
+          setDbEnabled(false);
+          setDbStatus(
+            "`user_settings` хүснэгт олдсонгүй. SQL ажиллуулаад refresh хийнэ үү.",
+          );
+          return;
+        }
+        setDbStatus(`DB save алдаа: ${error.message}`);
+      } else {
+        setDbStatus("DB дээр хадгалагдлаа.");
+      }
+    }, 600);
+
+    return () => clearTimeout(t);
+  }, [dbEnabled, state, supabase, userId]);
+
   const dirtySummary = useMemo(() => {
     const minutes = state.dailyGoalMin;
     const modes = state.studyModes.join(", ");
-    return `${state.level} • ${minutes} мин/өдөр • ${modes}`;
-  }, [state.dailyGoalMin, state.level, state.studyModes]);
+    return isMn
+      ? `${state.level} • ${minutes} мин/өдөр • ${modes}`
+      : `${state.level} • ${minutes} min/day • ${modes}`;
+  }, [isMn, state.dailyGoalMin, state.level, state.studyModes]);
 
   const reset = () => {
-    setState(DEFAULT);
+    setState((prev) => ({
+      ...DEFAULT,
+      fullName: prev.fullName,
+      email: prev.email,
+    }));
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {}
@@ -120,7 +320,7 @@ export default function SettingsPage() {
       <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">Settings</h1>
+            <h1 className="text-xl font-semibold text-slate-900">{t.settings}</h1>
             <p className="text-sm text-slate-500">{dirtySummary}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -128,20 +328,25 @@ export default function SettingsPage() {
               onClick={reset}
               className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
             >
-              Reset
+              {t.reset}
             </button>
             <button
               onClick={handleLogout}
               disabled={loggingOut}
               className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-70"
             >
-              {loggingOut ? "Logging out..." : "Logout"}
+              {loggingOut ? t.loggingOut : t.logout}
             </button>
           </div>
         </div>
         {authError ? (
           <div className="mx-auto max-w-4xl px-4 pb-3 text-sm text-red-600">
             {authError}
+          </div>
+        ) : null}
+        {dbStatus ? (
+          <div className="mx-auto max-w-4xl px-4 pb-3 text-xs text-slate-500">
+            {dbStatus}
           </div>
         ) : null}
       </div>
@@ -151,22 +356,27 @@ export default function SettingsPage() {
         <div className="grid gap-6">
           {/* Profile */}
           <Section
-            title="Profile"
-            desc="Тохиргоо хадгалах, сануулга авах имэйл."
+            title={t.profile}
+            desc={t.profileDesc}
           >
             <div className="grid gap-3 md:grid-cols-2">
-              <Field label="Email">
+              <Field label={t.name}>
                 <input
-                  value={state.email}
-                  onChange={(e) =>
-                    setState((s) => ({ ...s, email: e.target.value }))
-                  }
-                  placeholder="name@example.com"
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-sky-300 focus:ring-2"
+                  value={state.fullName}
+                  readOnly
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none"
                 />
               </Field>
 
-              <Field label="UI Language">
+              <Field label="Email">
+                <input
+                  value={state.email}
+                  readOnly
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none"
+                />
+              </Field>
+
+              <Field label={t.uiLanguage}>
                 <Select
                   value={state.uiLang}
                   onChange={(v) =>
@@ -180,12 +390,12 @@ export default function SettingsPage() {
 
           {/* Learning */}
           <Section
-            title="Learning"
-            desc="Түвшин, өдөр тутмын зорилго, хичээлийн төрөл."
+            title={t.learning}
+            desc={t.learningDesc}
           >
             <div className="grid gap-5">
               <div className="grid gap-3 md:grid-cols-2">
-                <Field label="Level">
+                <Field label={t.level}>
                   <Select
                     value={state.level}
                     onChange={(v) =>
@@ -195,7 +405,7 @@ export default function SettingsPage() {
                   />
                 </Field>
 
-                <Field label="Daily goal (minutes)">
+                <Field label={t.dailyGoal}>
                   <div className="flex items-center gap-3">
                     <input
                       type="range"
@@ -221,7 +431,7 @@ export default function SettingsPage() {
                 </Field>
               </div>
 
-              <Field label="Study modes">
+              <Field label={t.studyModes}>
                 <div className="flex flex-wrap gap-2">
                   {(
                     [
@@ -257,72 +467,44 @@ export default function SettingsPage() {
                   })}
                 </div>
                 <p className="mt-1 text-xs text-slate-500">
-                  Сонгосон төрлүүдээр чинь хичээл санал болгоно.
+                  {t.studyModesDesc}
                 </p>
               </Field>
 
               <div className="grid gap-3 md:grid-cols-2">
                 <Toggle
-                  title="Show Mongolian translation"
-                  desc="Үг/өгүүлбэрийн орчуулга харуулах"
+                  title={t.showTranslation}
+                  desc={t.showTranslationDesc}
                   checked={state.showTranslations}
                   onChange={(v) =>
                     setState((s) => ({ ...s, showTranslations: v }))
                   }
                 />
                 <Toggle
-                  title="Auto-play audio"
-                  desc="Суралцах үед дуудлага автоматаар тоглуулах"
+                  title={t.autoPlay}
+                  desc={t.autoPlayDesc}
                   checked={state.autoPlayAudio}
                   onChange={(v) =>
                     setState((s) => ({ ...s, autoPlayAudio: v }))
                   }
                 />
               </div>
-
-              <Field label="Voice speed">
-                <div className="flex gap-2">
-                  {[0.75, 1, 1.25].map((v) => {
-                    const active = state.voiceSpeed === v;
-                    return (
-                      <button
-                        key={v}
-                        type="button"
-                        onClick={() =>
-                          setState((s) => ({
-                            ...s,
-                            voiceSpeed: v as SettingsState["voiceSpeed"],
-                          }))
-                        }
-                        className={[
-                          "rounded-xl border px-3 py-2 text-sm transition",
-                          active
-                            ? "border-sky-200 bg-sky-50 text-sky-700"
-                            : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50",
-                        ].join(" ")}
-                      >
-                        {v}x
-                      </button>
-                    );
-                  })}
-                </div>
-              </Field>
             </div>
           </Section>
 
           {/* Reminders */}
           <Section
-            title="Reminders"
-            desc="Өдөр бүр сануулга авч, streak-ээ хадгал."
+            title={t.reminders}
+            desc={t.remindersDesc}
           >
             <div className="grid gap-3 md:grid-cols-2">
               <Toggle
-                title="Daily reminder"
-                desc="Өдөр бүр тодорхой цагт сануулга асаах"
+                title={t.dailyReminder}
+                desc={t.dailyReminderDesc}
                 checked={state.remindEnabled}
                 onChange={(v) => setState((s) => ({ ...s, remindEnabled: v }))}
               />
-              <Field label="Reminder time">
+              <Field label={t.reminderTime}>
                 <input
                   type="time"
                   value={state.remindTime}
@@ -338,15 +520,6 @@ export default function SettingsPage() {
                 </p>
               </Field>
             </div>
-
-            <div className="mt-2">
-              <Toggle
-                title="Streak freeze"
-                desc="Нэг өдөр алдах үед streak хамгаалах (сонголт)"
-                checked={state.streakFreeze}
-                onChange={(v) => setState((s) => ({ ...s, streakFreeze: v }))}
-              />
-            </div>
           </Section>
 
           {/* Footer */}
@@ -355,13 +528,13 @@ export default function SettingsPage() {
               <p className="text-sm text-slate-600">
                 {savedAt ? (
                   <>
-                    Last saved:{" "}
+                    {t.lastSaved}{" "}
                     <span className="font-medium text-slate-800">
                       {new Date(savedAt).toLocaleString()}
                     </span>
                   </>
                 ) : (
-                  "Changes are saved automatically."
+                  t.autoSaved
                 )}
               </p>
               <div className="text-xs text-slate-500">

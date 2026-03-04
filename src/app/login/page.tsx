@@ -34,7 +34,7 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[url('/english.PNG')] bg-cover bg-center bg-no-repeat px-4">
+    <div className="flex min-h-screen text-black items-center justify-center bg-[url('/english.PNG')] bg-cover bg-center bg-no-repeat px-4">
       <div className="w-full max-w-[400px] rounded-3xl border border-white/30 bg-white/20 p-8 shadow-2xl backdrop-blur-md">
         <h1 className="mb-6 text-3xl font-semibold text-white">Login</h1>
         <form className="space-y-4" onSubmit={onSubmit}>

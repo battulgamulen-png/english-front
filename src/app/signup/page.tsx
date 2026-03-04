@@ -71,13 +71,16 @@ export default function Signup() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[url('/english.PNG')] bg-cover bg-center bg-no-repeat px-4">
+    <div className="flex text-black min-h-screen items-center justify-center bg-[url('/english.PNG')] bg-cover bg-center bg-no-repeat px-4">
       <div className="w-full max-w-[400px] rounded-3xl border border-white/30 bg-white/20 p-8 shadow-2xl backdrop-blur-md">
         <h1 className="mb-6 text-3xl font-semibold text-white">Sign up</h1>
         <form className="space-y-4" onSubmit={onSubmit}>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="firstName" className="mb-2 block text-sm text-white">
+              <label
+                htmlFor="firstName"
+                className="mb-2 block text-sm text-white"
+              >
                 First Name
               </label>
               <input
@@ -90,7 +93,10 @@ export default function Signup() {
               />
             </div>
             <div>
-              <label htmlFor="lastName" className="mb-2 block text-sm text-white">
+              <label
+                htmlFor="lastName"
+                className="mb-2 block text-sm text-white"
+              >
                 Last Name
               </label>
               <input
@@ -137,7 +143,10 @@ export default function Signup() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor="bornYear" className="mb-2 block text-sm text-white">
+              <label
+                htmlFor="bornYear"
+                className="mb-2 block text-sm text-white"
+              >
                 Born Year
               </label>
               <input
@@ -150,7 +159,10 @@ export default function Signup() {
               />
             </div>
             <div>
-              <label htmlFor="bornMonth" className="mb-2 block text-sm text-white">
+              <label
+                htmlFor="bornMonth"
+                className="mb-2 block text-sm text-white"
+              >
                 Born Month
               </label>
               <input
@@ -179,7 +191,9 @@ export default function Signup() {
           </div>
 
           {error ? <p className="text-sm text-red-200">{error}</p> : null}
-          {message ? <p className="text-sm text-emerald-200">{message}</p> : null}
+          {message ? (
+            <p className="text-sm text-emerald-200">{message}</p>
+          ) : null}
 
           <button
             type="submit"
