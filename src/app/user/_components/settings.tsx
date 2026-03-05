@@ -76,17 +76,7 @@ function toggleInArray<T>(arr: T[], item: T) {
 export default function SettingsPage() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
-  const [state, setState] = useState<SettingsState>(() => {
-    if (typeof window === "undefined") return DEFAULT;
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return DEFAULT;
-      const parsed = JSON.parse(raw) as Partial<SettingsState>;
-      return { ...DEFAULT, ...parsed };
-    } catch {
-      return DEFAULT;
-    }
-  });
+  const [state, setState] = useState<SettingsState>(DEFAULT);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<string | null>(null);
@@ -141,6 +131,17 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<SettingsState>;
+      setState((prev) => ({ ...prev, ...parsed }));
+    } catch {
+      // ignore malformed local storage
+    }
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
 
     const loadAuthAndDbSettings = async () => {
@@ -184,9 +185,7 @@ export default function SettingsPage() {
       if (error) {
         if (error.message.includes("public.user_settings")) {
           setDbEnabled(false);
-          setDbStatus(
-            "`user_settings` хүснэгт олдсонгүй. Local settings ашиглаж байна.",
-          );
+          setDbStatus("");
           return;
         }
         setDbStatus(
@@ -320,7 +319,9 @@ export default function SettingsPage() {
       <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
           <div>
-            <h1 className="text-xl font-semibold text-slate-900">{t.settings}</h1>
+            <h1 className="text-xl font-semibold text-slate-900">
+              {t.settings}
+            </h1>
             <p className="text-sm text-slate-500">{dirtySummary}</p>
           </div>
           <div className="flex items-center gap-2">
@@ -355,10 +356,7 @@ export default function SettingsPage() {
       <div className="mx-auto max-w-4xl px-4 py-8">
         <div className="grid gap-6">
           {/* Profile */}
-          <Section
-            title={t.profile}
-            desc={t.profileDesc}
-          >
+          <Section title={t.profile} desc={t.profileDesc}>
             <div className="grid gap-3 md:grid-cols-2">
               <Field label={t.name}>
                 <input
@@ -389,10 +387,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* Learning */}
-          <Section
-            title={t.learning}
-            desc={t.learningDesc}
-          >
+          <Section title={t.learning} desc={t.learningDesc}>
             <div className="grid gap-5">
               <div className="grid gap-3 md:grid-cols-2">
                 <Field label={t.level}>
@@ -493,10 +488,7 @@ export default function SettingsPage() {
           </Section>
 
           {/* Reminders */}
-          <Section
-            title={t.reminders}
-            desc={t.remindersDesc}
-          >
+          <Section title={t.reminders} desc={t.remindersDesc}>
             <div className="grid gap-3 md:grid-cols-2">
               <Toggle
                 title={t.dailyReminder}
@@ -514,10 +506,6 @@ export default function SettingsPage() {
                   disabled={!state.remindEnabled}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none ring-sky-300 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
                 />
-                <p className="mt-1 text-xs text-slate-500">
-                  *Энд зөвхөн UI тохиргоо. Push/Email reminder бол backend дээр
-                  холбоно.
-                </p>
               </Field>
             </div>
           </Section>
