@@ -5,6 +5,21 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey =
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
   process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
+const AUTH_TIMEOUT_MS = 2_000;
+
+const getLoginRedirect = (request: NextRequest) => {
+  const loginUrl = request.nextUrl.clone();
+  loginUrl.pathname = "/login";
+  loginUrl.search = "";
+  return NextResponse.redirect(loginUrl);
+};
+
+const hasSupabaseAuthCookie = (request: NextRequest) =>
+  request.cookies
+    .getAll()
+    .some(
+      ({ name }) => name.startsWith("sb-") && name.includes("-auth-token"),
+    );
 
 export const updateSession = async (request: NextRequest) => {
   let response = NextResponse.next({
@@ -15,6 +30,10 @@ export const updateSession = async (request: NextRequest) => {
 
   if (!supabaseUrl || !supabaseKey) {
     return response;
+  }
+
+  if (!hasSupabaseAuthCookie(request)) {
+    return getLoginRedirect(request);
   }
 
   const supabase = createServerClient(supabaseUrl, supabaseKey, {
@@ -33,7 +52,24 @@ export const updateSession = async (request: NextRequest) => {
     },
   });
 
-  await supabase.auth.getUser();
+  try {
+    const authResult = await Promise.race([
+      supabase.auth.getUser(),
+      new Promise<null>((resolve) =>
+        setTimeout(() => resolve(null), AUTH_TIMEOUT_MS),
+      ),
+    ]);
+
+    if (authResult === null) {
+      return response;
+    }
+
+    if (authResult.error || !authResult.data.user) {
+      return getLoginRedirect(request);
+    }
+  } catch {
+    return response;
+  }
 
   return response;
 };

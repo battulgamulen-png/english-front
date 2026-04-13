@@ -47,9 +47,7 @@ export default function Signup() {
         (EMAIL_RATE_LIMIT_WINDOW_MS - elapsed) / 1000,
       );
       setLoading(false);
-      setError(
-        `Please wait ${waitSeconds}s before requesting another verification email.`,
-      );
+      setError(`Please wait ${waitSeconds}s before trying again.`);
       return;
     }
 
@@ -106,7 +104,7 @@ export default function Signup() {
       return;
     }
 
-    setMessage("Account created. Please verify your email, then log in.");
+    setMessage("Account created. Please log in.");
     router.push("/login");
   };
 
