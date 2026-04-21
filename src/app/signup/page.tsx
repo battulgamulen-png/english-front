@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  getReadableAuthErrorMessage,
+  normalizeEmail,
+} from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -35,7 +39,7 @@ export default function Signup() {
     setError(null);
     setMessage(null);
     setLoading(true);
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = normalizeEmail(email);
     const cooldownKey = getCooldownKey(normalizedEmail);
     const lastAttempt = ENFORCE_EMAIL_COOLDOWN
       ? Number(localStorage.getItem(cooldownKey) ?? 0)
@@ -51,7 +55,7 @@ export default function Signup() {
       return;
     }
 
-    const emailRedirectTo = `${window.location.origin}/user`;
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=/user`;
 
     const { data, error: signUpError } = await supabase.auth.signUp({
       email: normalizedEmail,
@@ -79,7 +83,7 @@ export default function Signup() {
         );
         return;
       }
-      setError(signUpError.message);
+      setError(getReadableAuthErrorMessage(signUpError));
       return;
     }
 
@@ -92,20 +96,9 @@ export default function Signup() {
       return;
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
-
     setLoading(false);
-
-    if (!signInError) {
-      router.push("/user");
-      return;
-    }
-
-    setMessage("Account created. Please log in.");
-    router.push("/login");
+    setMessage("Account created. Please confirm your email to continue.");
+    router.push("/login?message=check-email");
   };
 
   return (

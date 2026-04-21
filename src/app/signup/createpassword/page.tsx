@@ -1,5 +1,6 @@
 "use client";
 
+import { getReadableAuthErrorMessage } from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/client";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -38,12 +39,12 @@ export default function CreatePassword() {
     setLoading(false);
 
     if (updateError) {
-      setError(updateError.message);
+      setError(getReadableAuthErrorMessage(updateError));
       return;
     }
 
     setMessage("Password updated successfully. Redirecting to login...");
-    setTimeout(() => router.push("/login"), 1000);
+    setTimeout(() => router.push("/login?message=password-updated"), 1000);
   };
 
   return (

@@ -1,5 +1,9 @@
 "use client";
 
+import {
+  getReadableAuthErrorMessage,
+  normalizeEmail,
+} from "@/utils/supabase/auth";
 import { createClient } from "@/utils/supabase/client";
 import { FormEvent, useState } from "react";
 
@@ -27,7 +31,7 @@ export default function ForgetPassword() {
     setLoading(true);
     setError(null);
     setMessage(null);
-    const normalizedEmail = email.toLowerCase().trim();
+    const normalizedEmail = normalizeEmail(email);
     const cooldownKey = getCooldownKey(normalizedEmail);
     const lastAttempt = ENFORCE_EMAIL_COOLDOWN
       ? Number(localStorage.getItem(cooldownKey) ?? 0)
@@ -45,7 +49,7 @@ export default function ForgetPassword() {
       return;
     }
 
-    const redirectTo = `${window.location.origin}/signup/createpassword`;
+    const redirectTo = `${window.location.origin}/auth/callback?next=/signup/createpassword`;
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(
       normalizedEmail,
       { redirectTo },
@@ -64,7 +68,7 @@ export default function ForgetPassword() {
         return;
       }
 
-      setError(resetError.message);
+      setError(getReadableAuthErrorMessage(resetError));
       return;
     }
 
