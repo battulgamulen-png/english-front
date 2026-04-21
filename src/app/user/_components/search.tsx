@@ -58,7 +58,7 @@ const STATIC_ITEMS: SearchItem[] = [
     id: "settings",
     title: "Account Settings",
     section: "Settings",
-    description: "Profile, preferences, and logout.",
+    description: "Profile and learning preferences.",
     href: "/user/settings",
   },
 ];

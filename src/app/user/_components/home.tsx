@@ -40,7 +40,7 @@ const CARDS: Card[] = [
   },
   {
     title: "Settings",
-    desc: "Профайл, хэл, зорилго болон logout тохируулга.",
+    desc: "Профайл, хэл, зорилго болон local тохиргоо.",
     href: "/user/settings",
     badge: "Profile",
   },

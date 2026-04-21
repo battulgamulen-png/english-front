@@ -21,8 +21,8 @@ export default function Header() {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [query, setQuery] = useState("");
-  const [displayName, setDisplayName] = useState("User");
-  const [displayRole] = useState("Student");
+  const [displayName, setDisplayName] = useState("Guest");
+  const [displayRole, setDisplayRole] = useState("Guest mode");
 
   const today = new Date().toLocaleDateString("en-US", {
     weekday: "long",
@@ -41,8 +41,14 @@ export default function Header() {
     let cancelled = false;
 
     const loadUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (cancelled || !data.user) return;
+      const { data, error } = await supabase.auth.getUser();
+      if (cancelled) return;
+
+      if (error || !data.user) {
+        setDisplayName("Guest");
+        setDisplayRole("Guest mode");
+        return;
+      }
 
       const first = (data.user.user_metadata?.first_name as string | undefined) ?? "";
       const last = (data.user.user_metadata?.last_name as string | undefined) ?? "";
@@ -51,6 +57,7 @@ export default function Header() {
       const byEmail = data.user.email?.split("@")[0] ?? "";
 
       setDisplayName(full || byMeta || byEmail || "User");
+      setDisplayRole("Student");
     };
 
     loadUser();

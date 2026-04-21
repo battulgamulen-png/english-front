@@ -4,7 +4,6 @@
 "use client";
 
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation";
 import React, { useEffect, useMemo, useState } from "react";
 
 type Level = "Beginner" | "Intermediate" | "Advanced";
@@ -64,6 +63,24 @@ type SettingsRow = {
 };
 
 const STORAGE_KEY = "english_site_settings_v1";
+const GUEST_NAME = "Guest learner";
+const GUEST_EMAIL = "guest@local.dev";
+
+function getInitialState(): SettingsState {
+  if (typeof window === "undefined") {
+    return DEFAULT;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) return DEFAULT;
+
+    const parsed = JSON.parse(raw) as Partial<SettingsState>;
+    return { ...DEFAULT, ...parsed };
+  } catch {
+    return DEFAULT;
+  }
+}
 
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
@@ -75,24 +92,23 @@ function toggleInArray<T>(arr: T[], item: T) {
 
 export default function SettingsPage() {
   const supabase = useMemo(() => createClient(), []);
-  const router = useRouter();
-  const [state, setState] = useState<SettingsState>(DEFAULT);
+  const [state, setState] = useState<SettingsState>(getInitialState);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
   const [dbStatus, setDbStatus] = useState<string | null>(null);
   const [dbEnabled, setDbEnabled] = useState(true);
-  const [loggingOut, setLoggingOut] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
+  const [isGuestMode, setIsGuestMode] = useState(false);
   const isMn = state.uiLang === "Монгол";
   const t = {
     settings: isMn ? "Тохиргоо" : "Settings",
     reset: isMn ? "Сэргээх" : "Reset",
-    logout: isMn ? "Гарах" : "Logout",
-    loggingOut: isMn ? "Гарч байна..." : "Logging out...",
+    mode: isMn ? "Горим" : "Mode",
+    guestMode: isMn ? "Шууд нэвтрэх горим" : "Direct access mode",
+    cloudMode: isMn ? "Cloud sync идэвхтэй" : "Cloud sync active",
     profile: isMn ? "Профайл" : "Profile",
     profileDesc: isMn
-      ? "Тохиргоо хадгалах, сануулга авах имэйл."
-      : "Profile and account contact.",
+      ? "Төхөөрөмж дээр хадгалагдах профайл ба тохиргоо."
+      : "Profile and settings stored on this device.",
     name: isMn ? "Нэр" : "Name",
     uiLanguage: isMn ? "Хэл" : "UI Language",
     learning: isMn ? "Суралцах" : "Learning",
@@ -131,17 +147,6 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<SettingsState>;
-      setState((prev) => ({ ...prev, ...parsed }));
-    } catch {
-      // ignore malformed local storage
-    }
-  }, []);
-
-  useEffect(() => {
     let cancelled = false;
 
     const loadAuthAndDbSettings = async () => {
@@ -151,11 +156,21 @@ export default function SettingsPage() {
       if (cancelled) return;
 
       if (authLoadError || !authData.user) {
-        setAuthError(authLoadError?.message ?? "Please login first.");
+        setIsGuestMode(true);
+        setDbEnabled(false);
+        setDbStatus(
+          "Guest mode идэвхтэй. Тохиргоо зөвхөн энэ төхөөрөмж дээр хадгалагдана.",
+        );
+        setState((prev) => ({
+          ...prev,
+          fullName: prev.fullName || GUEST_NAME,
+          email: prev.email || GUEST_EMAIL,
+        }));
         return;
       }
 
       const user = authData.user;
+      setIsGuestMode(false);
       setUserId(user.id);
 
       const first =
@@ -298,21 +313,6 @@ export default function SettingsPage() {
     } catch {}
   };
 
-  const handleLogout = async () => {
-    setLoggingOut(true);
-    setAuthError(null);
-
-    const { error } = await supabase.auth.signOut();
-    setLoggingOut(false);
-
-    if (error) {
-      setAuthError(error.message);
-      return;
-    }
-
-    router.push("/login");
-  };
-
   return (
     <div className="min-h-screen bg-white">
       {/* Top bar */}
@@ -331,20 +331,12 @@ export default function SettingsPage() {
             >
               {t.reset}
             </button>
-            <button
-              onClick={handleLogout}
-              disabled={loggingOut}
-              className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 transition hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-70"
-            >
-              {loggingOut ? t.loggingOut : t.logout}
-            </button>
+            <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-700">
+              <span className="font-medium">{t.mode}:</span>{" "}
+              {isGuestMode ? t.guestMode : t.cloudMode}
+            </div>
           </div>
         </div>
-        {authError ? (
-          <div className="mx-auto max-w-4xl px-4 pb-3 text-sm text-red-600">
-            {authError}
-          </div>
-        ) : null}
         {dbStatus ? (
           <div className="mx-auto max-w-4xl px-4 pb-3 text-xs text-slate-500">
             {dbStatus}
