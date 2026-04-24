@@ -3,7 +3,7 @@
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useMemo, useState } from "react";
 
-const INITIAL_LESSONS: Lesson[] = [
+export const INITIAL_LESSONS: Lesson[] = [
   // =========================
   // ACTIVE VOICE — 16
   // =========================
@@ -1083,7 +1083,7 @@ export default function Grammar() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as "level" | "title")}
-              className="rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-slate-300 sm:w-auto"
             >
               <option value="level">Sort: Level</option>
               <option value="title">Sort: Title</option>
@@ -1130,7 +1130,7 @@ export default function Grammar() {
             </select>
           </div>
 
-          <div className="ml-auto text-xs text-slate-500">
+          <div className="w-full text-xs text-slate-500 sm:ml-auto sm:w-auto sm:text-right">
             Showing{" "}
             <span className="font-medium text-slate-800">
               {filtered.length}

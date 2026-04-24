@@ -2,7 +2,12 @@
 
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { INITIAL_LESSONS } from "./grammar";
+import { videos } from "./links";
+import { QUESTIONS_SEED } from "./tests";
+import { buildSeedWords } from "./vocabulary";
 
 type Section =
   | "Grammar"
@@ -39,7 +44,7 @@ type TestRow = {
   prompt: string;
 };
 
-const STATIC_ITEMS: SearchItem[] = [
+const SECTION_ITEMS: SearchItem[] = [
   {
     id: "home",
     title: "User Home",
@@ -55,6 +60,27 @@ const STATIC_ITEMS: SearchItem[] = [
     href: "/user/links",
   },
   {
+    id: "grammar",
+    title: "Grammar Lessons",
+    section: "Grammar",
+    description: "English grammar lessons with EN + MN explanations.",
+    href: "/user/grammar",
+  },
+  {
+    id: "vocabulary",
+    title: "Vocabulary Library",
+    section: "Vocabulary",
+    description: "Word categories, translations, and examples.",
+    href: "/user/vocabulary",
+  },
+  {
+    id: "tests",
+    title: "English Level Test",
+    section: "Tests",
+    description: "Placement questions and score-based results.",
+    href: "/user/tests",
+  },
+  {
     id: "settings",
     title: "Account Settings",
     section: "Settings",
@@ -63,25 +89,70 @@ const STATIC_ITEMS: SearchItem[] = [
   },
 ];
 
+function dedupeItems(items: SearchItem[]) {
+  const seen = new Set<string>();
+
+  return items.filter((item) => {
+    const key = `${item.section}:${item.href}:${item.title}:${item.description}`.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+const LOCAL_ITEMS: SearchItem[] = dedupeItems([
+  ...SECTION_ITEMS,
+  ...INITIAL_LESSONS.map((lesson) => ({
+    id: `local-grammar-${lesson.id}`,
+    title: lesson.titleEn,
+    section: "Grammar" as const,
+    description: `${lesson.titleMn} • ${lesson.ruleEn} • ${lesson.tags.join(", ")}`,
+    href: "/user/grammar",
+  })),
+  ...buildSeedWords().map((word) => ({
+    id: `local-vocab-${word.id}`,
+    title: word.en,
+    section: "Vocabulary" as const,
+    description: `${word.mn} • ${word.category}`,
+    href: "/user/vocabulary",
+  })),
+  ...QUESTIONS_SEED.map((question, index) => ({
+    id: `local-test-${question.id}`,
+    title: `Question ${index + 1}`,
+    section: "Tests" as const,
+    description: question.prompt,
+    href: "/user/tests",
+  })),
+  ...videos.map((video, index) => ({
+    id: `local-link-${index}`,
+    title: video.title,
+    section: "Links" as const,
+    description: `YouTube lesson • ${video.publishedAt}`,
+    href: "/user/links",
+  })),
+]);
+
 function includesText(text: string, q: string) {
   return text.toLowerCase().includes(q.toLowerCase());
 }
 
 export default function Search({ query }: { query: string }) {
   const supabase = useMemo(() => createClient(), []);
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [items, setItems] = useState<SearchItem[]>(STATIC_ITEMS);
+  const [items, setItems] = useState<SearchItem[]>(LOCAL_ITEMS);
   const [sourceStatus, setSourceStatus] = useState<string | null>(null);
 
-  const q = query.trim();
+  const q = (searchParams.get("q") ?? query).trim();
 
   useEffect(() => {
     let cancelled = false;
 
     const load = async () => {
       if (!q) {
-        setItems(STATIC_ITEMS);
+        setItems(LOCAL_ITEMS);
         setSourceStatus(null);
+        setLoading(false);
         return;
       }
 
@@ -99,7 +170,7 @@ export default function Search({ query }: { query: string }) {
 
       if (cancelled) return;
 
-      const gathered: SearchItem[] = [...STATIC_ITEMS];
+      const gathered: SearchItem[] = [...LOCAL_ITEMS];
       const errors: string[] = [];
 
       if (grammarRes.error) {
@@ -147,11 +218,13 @@ export default function Search({ query }: { query: string }) {
         });
       }
 
-      setItems(gathered);
+      setItems(dedupeItems(gathered));
       setLoading(false);
 
       if (errors.length > 0) {
-        setSourceStatus(`Some sources unavailable: ${errors.join(", ")}`);
+        setSourceStatus(
+          `Some cloud sources unavailable: ${errors.join(", ")}. Local search results are still shown.`,
+        );
       }
     };
 
@@ -173,7 +246,7 @@ export default function Search({ query }: { query: string }) {
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
       <h2 className="text-lg font-semibold text-slate-900">Search Results</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Query: <span className="font-medium text-slate-900">{query || "-"}</span>
+        Query: <span className="font-medium text-slate-900">{q || "-"}</span>
       </p>
 
       {sourceStatus ? (

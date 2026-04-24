@@ -317,21 +317,21 @@ export default function SettingsPage() {
     <div className="min-h-screen bg-white">
       {/* Top bar */}
       <div className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4">
+        <div className="mx-auto flex max-w-4xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-xl font-semibold text-slate-900">
               {t.settings}
             </h1>
             <p className="text-sm text-slate-500">{dirtySummary}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <button
               onClick={reset}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:w-auto"
             >
               {t.reset}
             </button>
-            <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-700">
+            <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-700 sm:w-auto">
               <span className="font-medium">{t.mode}:</span>{" "}
               {isGuestMode ? t.guestMode : t.cloudMode}
             </div>
@@ -601,7 +601,7 @@ function Toggle({
   onChange: (v: boolean) => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-start sm:justify-between">
       <div>
         <div className="text-sm font-semibold text-slate-900">{title}</div>
         {desc ? (
@@ -613,7 +613,7 @@ function Toggle({
         type="button"
         onClick={() => onChange(!checked)}
         className={[
-          "relative h-8 w-14 rounded-full border transition",
+          "relative h-8 w-14 shrink-0 rounded-full border transition",
           checked
             ? "border-sky-200 bg-sky-500"
             : "border-slate-200 bg-slate-100",

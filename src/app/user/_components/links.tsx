@@ -1,4 +1,4 @@
-const videos = [
+export const videos = [
   {
     title: "English Speaking Practice - sDaily Conversation",
     url: "https://youtu.be/g5_kHyAOhPM?si=V5QjpM8kGZJMs7xP",

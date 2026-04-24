@@ -277,7 +277,7 @@ const SEED_BASE: Record<Category, { en: string; mn: string }[]> = {
   ],
 };
 
-function buildSeedWords(): VocabItem[] {
+export function buildSeedWords(): VocabItem[] {
   const result: VocabItem[] = [];
 
   CATEGORIES.forEach((category) => {
@@ -432,7 +432,7 @@ export default function Vocabulary() {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
               <button
                 type="button"
                 onClick={seedToDb}
@@ -441,7 +441,7 @@ export default function Vocabulary() {
               >
                 {loading ? "Working..." : "Seed 100/category to DB"}
               </button>
-              <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-700">
+              <div className="self-start rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm text-slate-700">
                 {category === "All" ? `Total ${words.length}` : `${selectedCount}/100`}
               </div>
             </div>
@@ -521,7 +521,7 @@ export default function Vocabulary() {
               >
                 <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <span className="text-lg font-semibold text-slate-900">{w.en}</span>
                       <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-600">
                         {w.category}

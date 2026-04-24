@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 
 type IconProps = {
   className?: string;
@@ -98,9 +98,28 @@ function ChevronIcon({ collapsed }: { collapsed: boolean }) {
   );
 }
 
-export default function Siderbar() {
+function CloseIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="m6 6 12 12M18 6 6 18" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+type SidebarProps = {
+  collapsed?: boolean;
+  mobile?: boolean;
+  onCloseMobile?: () => void;
+  onToggleCollapse?: () => void;
+};
+
+export default function Siderbar({
+  collapsed = false,
+  mobile = false,
+  onCloseMobile,
+  onToggleCollapse,
+}: SidebarProps) {
   const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false);
 
   const items = useMemo(
     () => [
@@ -116,27 +135,43 @@ export default function Siderbar() {
 
   return (
     <aside
-      className={`sticky top-0 h-screen border-r border-slate-200 bg-white text-black transition-all duration-300 ${
-        collapsed ? "w-[88px]" : "w-[260px]"
+      className={`flex h-full flex-col border-r border-slate-200 bg-white text-black ${
+        mobile
+          ? "w-[280px] max-w-[85vw] shadow-2xl"
+          : `sticky top-0 h-screen transition-all duration-300 ${collapsed ? "w-[88px]" : "w-[260px]"}`
       }`}
     >
-      <div className="flex h-16 items-center justify-between border-b border-black px-4">
+      <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
         <span
-          className={`text-sm font-semibold tracking-wide ${collapsed ? "hidden" : "block"}`}
+          className={`text-sm font-semibold tracking-wide ${
+            collapsed && !mobile ? "hidden" : "block"
+          }`}
         >
           ENGLISH
         </span>
-        <button
-          type="button"
-          onClick={() => setCollapsed((prev) => !prev)}
-          className="rounded-lg border border-slate-300 p-2 text-black transition hover:bg-slate-100"
-          aria-label="Toggle sidebar"
-        >
-          <ChevronIcon collapsed={collapsed} />
-        </button>
+
+        {mobile ? (
+          <button
+            type="button"
+            onClick={onCloseMobile}
+            className="rounded-lg border border-slate-300 p-2 text-black transition hover:bg-slate-100"
+            aria-label="Close sidebar"
+          >
+            <CloseIcon />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="rounded-lg border border-slate-300 p-2 text-black transition hover:bg-slate-100"
+            aria-label="Toggle sidebar"
+          >
+            <ChevronIcon collapsed={collapsed} />
+          </button>
+        )}
       </div>
 
-      <nav className="space-y-1 p-3">
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.href;
@@ -144,21 +179,27 @@ export default function Siderbar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm transition ${
+              onClick={() => {
+                if (mobile) onCloseMobile?.();
+              }}
+              className={`group flex items-center gap-3 rounded-xl py-2.5 text-sm transition ${
+                collapsed && !mobile ? "justify-center px-2.5" : "px-3"
+              } ${
                 isActive
                   ? "bg-cyan-100 text-black"
                   : "text-black hover:bg-slate-100 hover:text-black"
               }`}
+              aria-label={item.label}
+              title={item.label}
             >
               <Icon className="h-5 w-5 shrink-0" />
-              <span className={`${collapsed ? "hidden" : "inline"}`}>
+              <span className={`${collapsed && !mobile ? "hidden" : "inline"}`}>
                 {item.label}
               </span>
             </Link>
           );
         })}
       </nav>
-      
     </aside>
   );
 }

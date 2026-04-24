@@ -8,6 +8,14 @@ type IconProps = {
   className?: string;
 };
 
+function MenuIcon({ className = "h-5 w-5" }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
 function SearchIcon({ className = "h-5 w-5" }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" className={className}>
@@ -17,7 +25,11 @@ function SearchIcon({ className = "h-5 w-5" }: IconProps) {
   );
 }
 
-export default function Header() {
+export default function Header({
+  onOpenSidebar,
+}: {
+  onOpenSidebar?: () => void;
+}) {
   const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -70,17 +82,28 @@ export default function Header() {
   const initial = displayName.trim().charAt(0).toUpperCase() || "U";
 
   return (
-    <header className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="min-w-[180px]">
-          <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
-            Dashboard
-          </p>
-          <h1 className="text-xl font-semibold text-slate-900">Welcome back</h1>
-          <p className="text-xs text-slate-500">{today}</p>
+    <header className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
+        <div className="flex min-w-0 items-start gap-3">
+          <button
+            type="button"
+            onClick={onOpenSidebar}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 transition hover:bg-slate-50 lg:hidden"
+            aria-label="Open sidebar"
+          >
+            <MenuIcon className="h-4 w-4" />
+          </button>
+
+          <div className="min-w-0">
+            <p className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              Dashboard
+            </p>
+            <h1 className="text-xl font-semibold text-slate-900">Welcome back</h1>
+            <p className="text-xs text-slate-500">{today}</p>
+          </div>
         </div>
 
-        <form className="min-w-[240px] flex-1" onSubmit={onSubmit}>
+        <form className="w-full lg:flex-1" onSubmit={onSubmit}>
           <label className="relative block">
             <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
               <SearchIcon className="h-4 w-4" />
@@ -95,19 +118,21 @@ export default function Header() {
           </label>
         </form>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full items-center lg:ml-auto lg:w-auto">
           <button
             type="button"
-            className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 transition hover:bg-slate-50"
+            className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-2 py-1.5 transition hover:bg-slate-50 sm:w-auto"
           >
             <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-cyan-500 text-sm font-semibold text-white">
               {initial}
             </span>
-            <span className="pr-1 text-left">
-              <span className="block text-xs font-medium text-slate-900">
+            <span className="min-w-0 pr-1 text-left">
+              <span className="block truncate text-xs font-medium text-slate-900">
                 {displayName}
               </span>
-              <span className="block text-[11px] text-slate-500">{displayRole}</span>
+              <span className="block truncate text-[11px] text-slate-500">
+                {displayRole}
+              </span>
             </span>
           </button>
         </div>

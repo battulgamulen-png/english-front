@@ -21,7 +21,7 @@ type QuestionRow = {
   explanation: string | null;
 };
 
-const QUESTIONS_SEED: Q[] = [
+export const QUESTIONS_SEED: Q[] = [
   {
     id: "q1",
     type: "single",
@@ -477,7 +477,7 @@ export default function Test() {
   return (
     <div className="min-h-screen bg-white">
       <div className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-4xl items-start justify-between gap-4 px-4 py-6">
+        <div className="mx-auto flex max-w-4xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold text-slate-900">English Level Test</h1>
             <p className="mt-1 text-sm text-slate-500">
@@ -486,7 +486,7 @@ export default function Test() {
             {dbMessage ? <p className="mt-2 text-xs text-slate-500">{dbMessage}</p> : null}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+          <div className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 sm:w-auto">
             <div className="text-xs text-slate-500">Progress</div>
             <div className="mt-1 text-sm font-semibold text-slate-900">
               {questions.length - unansweredCount}/{questions.length}
@@ -512,7 +512,7 @@ export default function Test() {
             const picked = answers[q.id];
             return (
               <div key={q.id} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-start justify-between gap-4">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div>
                     <div className="text-xs font-medium text-slate-500">Question {idx + 1}</div>
                     <div className="mt-1 text-base font-semibold text-slate-900">{q.prompt}</div>
@@ -536,7 +536,7 @@ export default function Test() {
                         type="button"
                         onClick={() => onSelect(q.id, c.id)}
                         className={[
-                          "flex w-full items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition",
+                          "flex w-full flex-col items-start gap-3 rounded-2xl border px-4 py-3 text-left text-sm transition sm:flex-row sm:items-center sm:justify-between",
                           submitted
                             ? best
                               ? "border-emerald-200 bg-emerald-50"
@@ -590,7 +590,7 @@ export default function Test() {
                     : `Дутуу: ${unansweredCount} асуулт байна.`}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
                     onClick={onReset}
@@ -664,7 +664,7 @@ function ResultCard({
       <button
         type="button"
         onClick={onReset}
-        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+        className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 sm:w-auto"
       >
         Retake test
       </button>
